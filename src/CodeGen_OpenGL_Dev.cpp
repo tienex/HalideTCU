@@ -24,7 +24,9 @@ bool is_opengl_es(const Target &target) {
     // versions (desktop GL, GLES2, GLES3, ...), probably by making it part of
     // Target.
     return (target.os == Target::Android ||
-            target.os == Target::IOS);
+            target.os == Target::IOS ||
+            target.os == Target::TvOS ||
+            target.os == Target::WatchOS);
 }
 
 // Maps Halide types to appropriate GLSL types or emit error if no equivalent

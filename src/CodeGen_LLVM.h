@@ -141,12 +141,14 @@ protected:
   static bool llvm_ARM_enabled;
   static bool llvm_Hexagon_enabled;
   static bool llvm_AArch64_enabled;
+  static bool llvm_LoongArch_enabled;
   static bool llvm_NVPTX_enabled;
   static bool llvm_Mips_enabled;
   static bool llvm_PowerPC_enabled;
   static bool llvm_AMDGPU_enabled;
   static bool llvm_WebAssembly_enabled;
   static bool llvm_RISCV_enabled;
+  static bool llvm_VE_enabled;
 
   std::unique_ptr<llvm::Module> module;
   llvm::Function *function;

@@ -344,7 +344,8 @@ std::string simple_type_to_mangle_char(const std::string type_name, const Target
     } else if (type_name == "uint32_t") {
         return "j";
     } else if (type_name == "int64_t") {
-        if (target.os == Target::OSX ||
+        if (target.os == Target::MacOS ||
+            target.os == Target::MacCatalyst ||
             target.bits == 32 ||
             target.has_feature(Target::MinGW)) {
             return "x";
@@ -352,7 +353,8 @@ std::string simple_type_to_mangle_char(const std::string type_name, const Target
             return "l";
         }
     } else if (type_name == "uint64_t") {
-        if (target.os == Target::OSX ||
+        if (target.os == Target::MacOS ||
+            target.os == Target::MacCatalyst ||
             target.bits == 32 ||
             target.has_feature(Target::MinGW)) {
             return "y";
@@ -533,7 +535,7 @@ std::string mangle_type(const Type &type, const Target &target, PrevPrefixes &pr
         case 32:
             return "i";
         case 64:
-            if (target.os == Target::OSX ||
+            if (target.os == Target::MacOS ||
                 target.bits == 32 ||
                 target.has_feature(Target::MinGW)) {
                 return "x";
@@ -554,7 +556,7 @@ std::string mangle_type(const Type &type, const Target &target, PrevPrefixes &pr
         case 32:
             return "j";
         case 64:
-            if (target.os == Target::OSX ||
+            if (target.os == Target::MacOS ||
                 target.bits == 32 ||
                 target.has_feature(Target::MinGW)) {
                 return "y";
@@ -923,8 +925,8 @@ void main_tests(const MangleResult *expecteds, const Target &target) {
 void cplusplus_mangle_test() {
     Target targets[]{Target(Target::Linux, Target::X86, 32),
                      Target(Target::Linux, Target::X86, 64),
-                     Target(Target::OSX, Target::X86, 32),
-                     Target(Target::OSX, Target::X86, 64),
+                     Target(Target::MacOS, Target::X86, 32),
+                     Target(Target::MacOS, Target::X86, 64),
                      Target(Target::Windows, Target::X86, 32),
                      Target(Target::Windows, Target::X86, 64)};
     MangleResult *expecteds[]{ItaniumABIMangling_main, ItaniumABIMangling_main, ItaniumABIMangling_main,

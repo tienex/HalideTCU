@@ -19,6 +19,22 @@
 #include <unistd.h>
 #endif
 
+#if LLVM_VERSION <= 110
+using llvm::TargetMachine::CodeGenFileType;
+#define CGFT_ObjectFile llvm::TargetMachine::CGFT_ObjectFile
+#define CGFT_AssemblyFile llvm::TargetMachine::CGFT_AssemblyFile
+#else
+using llvm::CodeGenFileType;
+#if LLVM_VERSION >= 180
+#define CGFT_ObjectFile llvm::CodeGenFileType::ObjectFile
+#define CGFT_AssemblyFile llvm::CodeGenFileType::AssemblyFile
+#else
+#define CGFT_ObjectFile llvm::CGFT_ObjectFile
+#define CGFT_AssemblyFile llvm::CGFT_AssemblyFile
+#endif
+#define F_None OF_None
+#endif
+
 namespace Halide {
 
 namespace Internal {
@@ -155,20 +171,27 @@ void write_symbol_table(std::ostream &out,
         }
         llvm::object::SymbolicFile &obj = *obj_or_err.get();
         for (const auto &sym : obj.symbols()) {
-            const uint32_t sym_flags = sym.getFlags();
-            if (sym_flags & llvm::object::SymbolRef::SF_FormatSpecific) {
-                continue;
-            }
-            if (!(sym_flags & llvm::object::SymbolRef::SF_Global)) {
-                continue;
-            }
-            if ((sym_flags & llvm::object::SymbolRef::SF_Undefined) &&
-                !(sym_flags & llvm::object::SymbolRef::SF_Indirect)) {
-                continue;
-            }
-            // Windows COFF doesn't support weak symbols.
-            if (sym_flags & llvm::object::SymbolRef::SF_Weak) {
-                continue;
+            auto symFlags = sym.getFlags();
+            if (!!symFlags) {
+#if LLVM_VERSION >= 120
+                const auto sym_flags = *symFlags;
+#else
+                const auto sym_flags = symFlags;
+#endif
+                if (sym_flags & llvm::object::SymbolRef::SF_FormatSpecific) {
+                    continue;
+                }
+                if (!(sym_flags & llvm::object::SymbolRef::SF_Global)) {
+                    continue;
+                }
+                if ((sym_flags & llvm::object::SymbolRef::SF_Undefined) &&
+                    !(sym_flags & llvm::object::SymbolRef::SF_Indirect)) {
+                    continue;
+                }
+                // Windows COFF doesn't support weak symbols.
+                if (sym_flags & llvm::object::SymbolRef::SF_Weak) {
+                    continue;
+                }
             }
 
             llvm::SmallString<128> symbols_buf;
@@ -325,7 +348,7 @@ std::unique_ptr<llvm::Module> clone_module(const llvm::Module &module_in) {
 
 }  // namespace
 
-void emit_file(const llvm::Module &module_in, Internal::LLVMOStream &out, llvm::TargetMachine::CodeGenFileType file_type) {
+void emit_file(const llvm::Module &module_in, Internal::LLVMOStream &out, CodeGenFileType file_type) {
     Internal::debug(1) << "emit_file.Compiling to native code...\n";
     Internal::debug(2) << "Target triple: " << module_in.getTargetTriple() << "\n";
 
@@ -352,13 +375,21 @@ void emit_file(const llvm::Module &module_in, Internal::LLVMOStream &out, llvm::
     pass_manager.add(llvm::createAlwaysInlinerLegacyPass());
 
     // Remove any stale debug info
+#if LLVM_VERSION >= 180
+    pass_manager.add(llvm::createStripDebugMachineModulePass(true));
+#else
     pass_manager.add(llvm::createStripDeadDebugInfoPass());
+#endif
 
     // Enable symbol rewriting. This allows code outside libHalide to
     // use symbol rewriting when compiling Halide code (for example, by
     // using cl::ParseCommandLineOption and then passing the appropriate
     // rewrite options via -mllvm flags).
+#if LLVM_VERSION >= 180
+   // TODO pass_manager.addPass(llvm::RewriteSymbolPass());
+#else
     pass_manager.add(llvm::createRewriteSymbolsPass());
+#endif
 
     // Override default to generate verbose assembly.
     target_machine->Options.MCOptions.AsmVerbose = true;
@@ -376,11 +407,11 @@ std::unique_ptr<llvm::Module> compile_module_to_llvm_module(const Module &module
 }
 
 void compile_llvm_module_to_object(llvm::Module &module, Internal::LLVMOStream &out) {
-    emit_file(module, out, llvm::TargetMachine::CGFT_ObjectFile);
+    emit_file(module, out, CGFT_ObjectFile);
 }
 
 void compile_llvm_module_to_assembly(llvm::Module &module, Internal::LLVMOStream &out) {
-    emit_file(module, out, llvm::TargetMachine::CGFT_AssemblyFile);
+    emit_file(module, out, CGFT_AssemblyFile);
 }
 
 void compile_llvm_module_to_llvm_bitcode(llvm::Module &module, Internal::LLVMOStream &out) {
@@ -528,7 +559,11 @@ void create_static_library(const std::vector<std::string> &src_files_in, const T
         return;
     }
 
+#if LLVM_VERSION >= 180
+    const llvm::SymtabWritingMode write_symtab = llvm::SymtabWritingMode::NormalSymtab;
+#else
     const bool write_symtab = true;
+#endif
     const auto kind = Internal::get_triple_for_target(target).isOSDarwin() ? llvm::object::Archive::K_BSD : llvm::object::Archive::K_GNU;
     const bool thin = false;
     auto result = llvm::writeArchive(dst_file, new_members,

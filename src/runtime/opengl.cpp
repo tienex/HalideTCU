@@ -3,6 +3,12 @@
 #include "printer.h"
 #include "mini_opengl.h"
 
+#if 1
+#define VLA_DEF(type, var, n) type *var = (type *)__builtin_alloca((n) * sizeof(type))
+#else
+#define VLA_DEF(type, var, n) type var[n]
+#endif
+
 // This constant is used to indicate that the application will take
 // responsibility for binding the output render target before calling the
 // Halide function.
@@ -958,6 +964,7 @@ WEAK int halide_opengl_device_malloc(void *user_context, halide_buffer_t *buf) {
         buf->device_interface = &opengl_device_interface;
         buf->device_interface->impl->use_module();
         halide_allocated = true;
+        (void)halide_allocated;
         debug(user_context) << "Allocated texture " << tex
                             << " of size " << width << " x " << height << "\n";
 
@@ -1400,8 +1407,8 @@ WEAK int halide_opengl_run(void *user_context,
     int num_padded_uniform_ints   = (num_uniform_ints + 0x3) & ~0x3;
 
     // Allocate storage for the packed arguments
-    float uniform_float[num_padded_uniform_floats];
-    int   uniform_int[num_padded_uniform_ints];
+    VLA_DEF(float, uniform_float, num_padded_uniform_floats);
+    VLA_DEF(int,   uniform_int,   num_padded_uniform_ints);
 
     bool bind_render_targets = true;
 
@@ -1668,7 +1675,7 @@ WEAK int halide_opengl_run(void *user_context,
     int vertex_buffer_size = width*height*num_padded_attributes;
 
     int element_buffer_size = (width-1)*(height-1)*6;
-    int element_buffer[element_buffer_size];
+    VLA_DEF(int, element_buffer, element_buffer_size);
 
     int idx = 0;
     for (int h=0;h!=(height-1);++h) {
@@ -1740,7 +1747,7 @@ WEAK int halide_opengl_run(void *user_context,
     int num_packed_attributes = num_padded_attributes/4;
 
     // Set up the per vertex attributes
-    GLint attrib_ids[num_packed_attributes];
+    VLA_DEF(GLint, attrib_ids, num_packed_attributes);
 
     for (int i=0;i!=num_packed_attributes;i++) {
 

@@ -71,7 +71,73 @@ int main(int argc, char **argv) {
     // For AOT-compiled code, we need to explicitly declare the
     // arguments to the routine. This routine takes two. Arguments are
     // usually Params or ImageParams.
+#if defined(__APPLE__) && defined(__MACOS_UNIVERSAL__)
+#if defined(__COMPILE_arm__)
+    brighter.compile_to_static_library("lesson_10_halide.arm", {input, offset}, "brighter", Target("arm-32-macos"));
+#endif
+#if defined(__COMPILE_arm64__)
+    brighter.compile_to_static_library("lesson_10_halide.arm64", {input, offset}, "brighter", Target("arm-64-macos"));
+#endif
+#if defined(__COMPILE_i386__)
+    brighter.compile_to_static_library("lesson_10_halide.i386", {input, offset}, "brighter", Target("x86-32-macos"));
+#endif
+#if defined(__COMPILE_x86_64__)
+    brighter.compile_to_static_library("lesson_10_halide.x86_64", {input, offset}, "brighter", Target("x86-64-macos"));
+#endif
+#if defined(__COMPILE_ppc__)
+    brighter.compile_to_static_library("lesson_10_halide.ppc", {input, offset}, "brighter", Target("powerpc-32-macos"));
+#endif
+#if defined(__COMPILE_ppc64__)
+    brighter.compile_to_static_library("lesson_10_halide.ppc64", {input, offset}, "brighter", Target("powerpc-64-macos"));
+#endif
+    system("/usr/bin/xcrun lipo -create -output lesson_10_halide.a"
+#if defined(__COMPILE_arm__)
+           " lesson_10_halide.arm.a"
+#endif
+#if defined(__COMPILE_arm64__)
+           " lesson_10_halide.arm64.a"
+#endif
+#if defined(__COMPILE_i386__)
+           " lesson_10_halide.i386.a"
+#endif
+#if defined(__COMPILE_x86_64__)
+           " lesson_10_halide.x86_64.a"
+#endif
+#if defined(__COMPILE_ppc__)
+           " lesson_10_halide.ppc.a"
+#endif
+#if defined(__COMPILE_ppc64__)
+           " lesson_10_halide.ppc64.a"
+#endif
+          );
+    system("/usr/bin/xcrun ranlib lesson_10_halide.a");
+    FILE *fp = fopen("lesson_10_halide.h", "wt");
+    if (fp) {
+        fputs(
+            "#if defined(__arm__)\n"
+            "#include \"lesson_10_halide.arm.h\"\n"
+            "#endif\n"
+            "#if defined(__aarch64__)\n"
+            "#include \"lesson_10_halide.arm64.h\"\n"
+            "#endif\n"
+            "#if defined(__i386__)\n"
+            "#include \"lesson_10_halide.i386.h\"\n"
+            "#endif\n"
+            "#if defined(__x86_64__)\n"
+            "#include \"lesson_10_halide.x86_64.h\"\n"
+            "#endif\n"
+            "#if defined(__ppc__)\n"
+            "#include \"lesson_10_halide.ppc.h\"\n"
+            "#endif\n"
+            "#if defined(__ppc64__)\n"
+            "#include \"lesson_10_halide.ppc64.h\"\n"
+            "#endif\n",
+            fp);
+        fclose(fp);
+    }
+#else
     brighter.compile_to_static_library("lesson_10_halide", {input, offset}, "brighter");
+#endif
 
     printf("Halide pipeline compiled, but not yet run.\n");
 

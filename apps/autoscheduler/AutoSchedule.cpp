@@ -905,6 +905,8 @@ struct LoopNest {
                     int64_t store_line_footprint = 1;
                     int64_t task_line_footprint = 1;
 
+                    (void)task_footprint;
+
                     if (e->producer->is_input) {
                         // This node represents an input. Its sites
                         // should be at the root level.
@@ -1473,6 +1475,7 @@ struct LoopNest {
                     single_point->loops(s, i).translate(shift);
                 }
             }
+            (void)total_extent;
 
             // Leave region required blank inside the computation of a Func
             node->set_bounds(f, std::move(single_point));
@@ -2774,6 +2777,7 @@ struct State {
                 parallel_tasks *= it->extent;
                 parallel_vars.push_back(it->var);
             }
+            (void)parallel_tasks;
 
             if (p.second->vars.size() > 1) {
                 p.second->schedule_source << "\n    .reorder(";
@@ -3145,6 +3149,7 @@ IntrusivePtr<State> optimal_schedule_pass(FunctionDAG &dag,
             q.clear();
             q.emplace(std::move(selected));
         }
+        (void)i;
     }
 }
 

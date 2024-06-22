@@ -156,7 +156,7 @@ class KeyInfo {
     size_t parameters_alignment() {
         int32_t max_alignment = 0;
         // Find maximum natural alignment needed.
-        for (const DependencyKeyInfoPair &i : dependencies.dependency_info) {
+        for (auto &i : dependencies.dependency_info) {
             int alignment = i.second.type.bytes();
             if (alignment > max_alignment) {
                 max_alignment = alignment;
@@ -199,7 +199,7 @@ public:
         }
         key_size_expr = (int32_t)size_so_far;
 
-        for (const DependencyKeyInfoPair &i : dependencies.dependency_info) {
+        for (auto &i : dependencies.dependency_info) {
             key_size_expr += i.second.size_expr;
         }
     }
@@ -246,7 +246,7 @@ public:
             }
         }
 
-        for (const DependencyKeyInfoPair &i : dependencies.dependency_info) {
+        for (auto &i : dependencies.dependency_info) {
             writes.push_back(Store::make(key_name,
                                          i.second.value_expr,
                                          (index / i.second.size_expr),
@@ -332,7 +332,7 @@ private:
 
             const Function f(iter->second);
 
-            for (const Function &o : outputs) {
+            for (auto &o : outputs) {
                 if (f.same_as(o)) {
                     user_error << "Function " << f.name() << " cannot be memoized because "
                                << "it an output of pipeline " << top_level_name << ".\n";
@@ -373,7 +373,7 @@ private:
             BufferBuilder builder;
             builder.dimensions = f.dimensions();
             std::string max_stage_num = std::to_string(f.updates().size());
-            for (const std::string arg : f.args()) {
+            for (const auto &arg : f.args()) {
                 std::string prefix = op->name + ".s" + max_stage_num + "." + arg;
                 Expr min = Variable::make(Int(32), prefix + ".min");
                 Expr max = Variable::make(Int(32), prefix + ".max");

@@ -8,9 +8,11 @@
 #include <map>
 
 #include "CodeGen_ARM.h"
+#include "CodeGen_LoongArch.h"
 #include "CodeGen_MIPS.h"
 #include "CodeGen_PowerPC.h"
 #include "CodeGen_RISCV.h"
+#include "CodeGen_VE.h"
 #include "CodeGen_WebAssembly.h"
 #include "CodeGen_X86.h"
 

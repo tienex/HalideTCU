@@ -64,6 +64,15 @@ if (BUILD_AOT_TUTORIAL)
   # Tutorial 10 requires that we build generation code, then run it,
   # so we can build the final executable.
   add_tutorial(lesson_10_aot_compilation_generate.cpp)
+  if(APPLE AND CMAKE_OSX_ARCHITECTURES)
+      list(APPEND _defs __MACOS_UNIVERSAL__)
+      foreach(arch IN LISTS CMAKE_OSX_ARCHITECTURES)
+          list(APPEND _defs "__COMPILE_${arch}__")
+      endforeach()
+      string(REPLACE "-" "_" _ndefs "${_defs}")
+      set_target_properties(lesson_10_aot_compilation_generate
+                            PROPERTIES COMPILE_DEFINITIONS "${_ndefs}")
+  endif()
 
   # LLVM may leak memory during Halide compilation. If projects are built with address sanitizer enabled,
   # this may cause generators to fail, making it hard to use Halide and address sanitizer at the same time.

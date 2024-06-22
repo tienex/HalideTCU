@@ -81,10 +81,11 @@ public:
             return For::make(op->name, new_min, new_extent, op->for_type, op->device_api, new_body);
         }
     }
-/*
+#if 0
     Expr visit(const Call *op) override {
         if (op -> is_intrinsic(Call::mma_load)){
-        /*Expr new_min = mutate(op->min);
+#if 0
+        Expr new_min = mutate(op->min);
         Expr new_extent = mutate(op->extent);
         hidden.push(op->name);
         Stmt new_body = mutate(op->body);
@@ -96,13 +97,15 @@ public:
             return op;
         } else {
             return For::make(op->name, new_min, new_extent, op->for_type, op->device_api, new_body);
-        }*/ 
-       /*     std::cout<<"INSIDE MMA LOAD SUBST"<<std::endl;
+        }
+        std::cout<<"INSIDE MMA LOAD SUBST"<<std::endl;
+#endif
             return op;
         }else{
             return op;
         }
-    }*/
+    }
+#endif
 };
 
 Expr substitute(const string &name, const Expr &replacement, const Expr &expr) {

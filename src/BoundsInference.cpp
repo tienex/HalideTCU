@@ -156,7 +156,7 @@ public:
 
       // Default case (no specialization)
       vector<Expr> predicates = def.split_predicate();
-      for (const ReductionVariable &rv : def.schedule().rvars()) {
+      for (auto &rv : def.schedule().rvars()) {
         rvars.insert(rv);
       }
 
@@ -167,7 +167,7 @@ public:
       vecs[1] = def.values();
 
       for (size_t i = 0; i < result.size(); ++i) {
-        for (const Expr &val : vecs[i]) {
+        for (auto &val : vecs[i]) {
           if (!predicates.empty()) {
             Expr cond_val =
                 Call::make(val.type(), Internal::Call::if_then_else,
@@ -298,7 +298,7 @@ public:
         return false;
       }
 
-      for (const Specialization &s : def.specializations()) {
+      for (auto &s : def.specializations()) {
         bool pure = is_dim_always_pure(s.definition, dim, dim_idx);
         if (!pure) {
           return false;
@@ -353,7 +353,7 @@ public:
 
       // Iterate over the fused pair list to check if the producer stage
       // is fused with the consumer stage at 'var'
-      for (const auto &pair : fused_pairs_in_groups[index]) {
+      for (auto &pair : fused_pairs_in_groups[index]) {
         if (((pair.func_1 == consumer_name) &&
              ((int)pair.stage_1 == consumer_stage)) ||
             ((pair.func_2 == consumer_name) &&
@@ -390,7 +390,7 @@ public:
       size_t last_dot = loop_level.rfind('.');
       string var = loop_level.substr(last_dot + 1);
 
-      for (const pair<pair<string, int>, Box> &i : bounds) {
+      for (auto &i : bounds) {
         string func_name = i.first.first;
         int func_stage_index = i.first.second;
         string stage_name = func_name + ".s" + std::to_string(func_stage_index);
@@ -412,7 +412,7 @@ public:
         // figure out what those dimensions are, and just have all
         // stages but the last use the bounds for the last stage.
         vector<bool> always_pure_dims(func_args.size(), true);
-        for (const Definition &def : func.updates()) {
+        for (auto &def : func.updates()) {
           for (size_t j = 0; j < always_pure_dims.size(); j++) {
             bool pure = is_dim_always_pure(def, func_args[j], j);
             if (!pure) {
@@ -593,7 +593,7 @@ public:
       }
 
       if (stage > 0) {
-        for (const ReductionVariable &rvar : rvars) {
+        for (auto &rvar : rvars) {
           string arg = name + ".s" + std::to_string(stage) + "." + rvar.var;
           s = LetStmt::make(arg + ".min", rvar.min, s);
           s = LetStmt::make(arg + ".max", rvar.extent + rvar.min - 1, s);
@@ -684,7 +684,7 @@ public:
         BufferBuilder builder;
         builder.type = func.output_types()[j];
         builder.dimensions = func.dimensions();
-        for (const string arg : func.args()) {
+        for (const auto &arg : func.args()) {
           string prefix =
               func.name() + ".s" + std::to_string(stage) + "." + arg;
           Expr min = Variable::make(Int(32), prefix + ".min");
@@ -708,7 +708,7 @@ public:
       Stmt annotate;
       if (target.has_feature(Target::MSAN)) {
         // Mark the buffers as initialized before calling out.
-        for (const auto &buffer : buffers_to_annotate) {
+        for (auto &buffer : buffers_to_annotate) {
           // Return type is really 'void', but no way to represent that in our
           // IR. Precedent (from halide_print, etc) is to use Int(32) and ignore
           // the result.
@@ -758,13 +758,13 @@ public:
     // We need to take into account specializations which may refer to
     // different reduction variables as well.
     void populate_scope(Scope<Interval> &result) {
-      for (const string farg : func.args()) {
+      for (const auto &farg : func.args()) {
         string arg = name + ".s" + std::to_string(stage) + "." + farg;
         result.push(farg, Interval(Variable::make(Int(32), arg + ".min"),
                                    Variable::make(Int(32), arg + ".max")));
       }
       if (stage > 0) {
-        for (const ReductionVariable &rv : rvars) {
+        for (auto &rv : rvars) {
           string arg = name + ".s" + std::to_string(stage) + "." + rv.var;
           result.push(rv.var, Interval(Variable::make(Int(32), arg + ".min"),
                                        Variable::make(Int(32), arg + ".max")));
@@ -899,7 +899,7 @@ public:
           }
         }
       } else {
-        for (const auto &cval : consumer.exprs) {
+        for (auto &cval : consumer.exprs) {
           map<string, Box> new_boxes;
           new_boxes = boxes_required(cval.value, scope, func_bounds);
           for (auto &i : new_boxes) {
@@ -1106,11 +1106,11 @@ public:
           vars = s.func.args();
         }
         if (stages[producing].stage > 0) {
-          for (const ReductionVariable &rv : s.rvars) {
+          for (auto &rv : s.rvars) {
             vars.push_back(rv.var);
           }
         }
-        for (const string &i : vars) {
+        for (auto &i : vars) {
           string var = s.stage_prefix + i;
           Interval in = bounds_of_inner_var(var, body);
           if (in.is_bounded()) {
@@ -1173,9 +1173,9 @@ Stmt bounds_inference(Stmt s, const vector<Function> &outputs,
   // Each element in 'fused_func_groups' indicates a group of functions
   // which loops should be fused together.
   vector<vector<Function>> fused_func_groups;
-  for (const vector<string> &group : fused_groups) {
+  for (auto &group : fused_groups) {
     vector<Function> fs;
-    for (const string &fname : group) {
+    for (auto &fname : group) {
       fs.push_back(env.find(fname)->second);
     }
     fused_func_groups.push_back(fs);
@@ -1183,9 +1183,9 @@ Stmt bounds_inference(Stmt s, const vector<Function> &outputs,
 
   // For each fused group, collect the pairwise fused function stages.
   vector<set<FusedPair>> fused_pairs_in_groups;
-  for (const vector<string> &group : fused_groups) {
+  for (auto &group : fused_groups) {
     set<FusedPair> pairs;
-    for (const string &fname : group) {
+    for (auto &fname : group) {
       Function f = env.find(fname)->second;
       if (!f.has_extern_definition()) {
         std::copy(f.definition().schedule().fused_pairs().begin(),

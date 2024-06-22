@@ -4,7 +4,11 @@
 #include <limits>
 #include <random>
 #include <string>
+#if __has_include(<cblas_new.h>)
+#include <cblas_new.h>
+#else
 #include <cblas.h>
+#endif
 #include <halide_blas.h>
 
 #define RUN_TEST(method)                                                \

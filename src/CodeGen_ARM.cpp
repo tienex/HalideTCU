@@ -499,7 +499,11 @@ void CodeGen_ARM::visit(const Sub *op) {
         Value *b = codegen(op->b);
 
         if (op->type.lanes() > 1) {
+#if LLVM_VERSION >= 120
+            a = ConstantDataVector::getSplat(op->type.lanes(), a);
+#else
             a = ConstantVector::getSplat(op->type.lanes(), a);
+#endif
         }
         value = builder->CreateFSub(a, b);
         return;
@@ -752,8 +756,11 @@ void CodeGen_ARM::visit(const Store *op) {
                   << (t.is_float() ? 'f' : 'i')
                   << t.bits()
                   << ".p0"
+#if LLVM_VERSION <= 140
                   << (t.is_float() ? 'f' : 'i')
-                  << t.bits();
+                  << t.bits()
+#endif
+                  ;
             arg_types = vector<llvm::Type *>(num_vecs + 1, llvm_type_of(intrin_type));
             arg_types.back() = llvm_type_of(intrin_type.element_of())->getPointerTo();
         }
@@ -930,9 +937,13 @@ void CodeGen_ARM::visit(const Load *op) {
             Expr slice_ramp = Ramp::make(slice_base, ramp->stride, intrin_lanes);
             Value *ptr = codegen_buffer_pointer(op->name, op->type.element_of(), slice_base);
             Value *bitcastI = builder->CreateBitOrPointerCast(ptr, load_return_pointer_type);
-            LoadInst *loadI = cast<LoadInst>(builder->CreateLoad(bitcastI));
+#if LLVM_VERSION >= 130
+            LoadInst *loadI = builder->CreateLoad(load_return_type, bitcastI);
+#else
+            LoadInst *loadI = builder->CreateLoad(bitcastI);
+#endif
 #if LLVM_VERSION >= 100
-            loadI->setAlignment(MaybeAlign(alignment));
+            loadI->setAlignment(Align(alignment));
 #else
             loadI->setAlignment(alignment);
 #endif
@@ -1009,14 +1020,25 @@ void CodeGen_ARM::visit(const Call *op) {
 }
 
 string CodeGen_ARM::mcpu() const {
-    if (target.bits == 32) {
+    if (target.os == Target::Windows) {
+        return "kryo";
+    } else if (target.bits == 32) {
         if (target.has_feature(Target::ARMv7s)) {
             return "swift";
         } else {
             return "cortex-a9";
         }
     } else {
-        if (target.os == Target::IOS) {
+        if (target.os == Target::MacOS ||
+            target.os == Target::MacCatalyst) {
+#if LLVM_VERSION <= 120
+            return "apple-latest";
+#else
+            return "apple-m1";
+#endif
+        } else if (target.os == Target::IOS ||
+                   target.os == Target::TvOS ||
+                   target.os == Target::WatchOS) {
             return "cyclone";
         } else {
             return "generic";
@@ -1043,7 +1065,11 @@ string CodeGen_ARM::mattrs() const {
             arch_flags = "+sve";
         }
 
-        if (target.os == Target::IOS || target.os == Target::OSX) {
+        if (target.os == Target::MacOS ||
+            target.os == Target::MacCatalyst ||
+            target.os == Target::IOS ||
+            target.os == Target::TvOS ||
+            target.os == Target::WatchOS) {
             return arch_flags + "+reserve-x18";
         } else {
             return arch_flags;

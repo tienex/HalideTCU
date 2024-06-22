@@ -240,7 +240,7 @@ public:
                 glDisableVertexAttribArray(i);
             }
             char buf[256];
-            sprintf(buf, "vertex attrib array %d state", i);
+            snprintf(buf, sizeof(buf), "vertex attrib array %d state", i);
             check_error(buf);
         }
 
@@ -279,7 +279,7 @@ public:
 
         for (int i = 0; i < ntextures; i++) {
             char buf[100];
-            sprintf(buf, "bound texture (unit %d)", i);
+            snprintf(buf, sizeof(buf), "bound texture (unit %d)", i);
             glActiveTexture(GL_TEXTURE0 + i);
             check_value(operation, buf, GL_TEXTURE_BINDING_2D, initial_bound_textures[i]);
         }

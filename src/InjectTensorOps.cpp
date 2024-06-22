@@ -98,7 +98,7 @@ class ExtractExtents : public IRVisitor {
   std::string threads[2];
   std::string blocks[2];
   std::string kernel;
-  const TensorOpDirective &tensorOp;
+  [[maybe_unused]] const TensorOpDirective &tensorOp;
   using IRVisitor::visit;
   void visit(const Variable *op) override {
     Expr var = Variable::make(Int(32), op->name);
@@ -255,8 +255,8 @@ public:
 
 class InjectTensorBlocks : public IRMutator {
   using IRMutator::visit;
-  const ExtractBlockSize &block_size;
-  const TensorOpDirective &tensorOp;
+  [[maybe_unused]] const ExtractBlockSize &block_size;
+  [[maybe_unused]] const TensorOpDirective &tensorOp;
   const ExtractExtents &extents;
 
   std::vector<Stmt> prev_block;
@@ -315,7 +315,7 @@ public:
 class RemoveDim : public IRMutator {
 
   using IRMutator::visit;
-  TensorOpDirective &tensor_op;
+  [[maybe_unused]] TensorOpDirective &tensor_op;
   Stmt visit(const For *op) override {
     if (ends_with(op->name, "s1.y")) {
       Stmt body = op->body;
@@ -327,7 +327,7 @@ class RemoveDim : public IRMutator {
   }
 
 public:
-  RemoveDim(TensorOpDirective tensorOp) : tensor_op(tensorOp) {}
+  RemoveDim(TensorOpDirective &tensorOp) : tensor_op(tensorOp) {}
 };
 class FixExtent : public IRMutator {
 
@@ -344,11 +344,11 @@ class FixExtent : public IRMutator {
   }
 
 public:
-  FixExtent(TensorOpDirective tensorOp) : tensor_op(tensorOp) {}
+  FixExtent(TensorOpDirective &tensorOp) : tensor_op(tensorOp) {}
 };
 class InjectTensorOps : public IRMutator {
 public:
-  InjectTensorOps(TensorOpDirective tensorOp) : tensor_op(tensorOp) {}
+  InjectTensorOps(TensorOpDirective &tensorOp) : tensor_op(tensorOp) {}
   using IRMutator::visit;
   string prefix;
   TensorOpDirective &tensor_op;

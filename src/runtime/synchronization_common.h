@@ -375,7 +375,7 @@ WEAK void word_lock::unlock_full() {
         word_lock_queue_data *head = (word_lock_queue_data *)(expected & ~(uintptr_t)(queue_lock_bit | lock_bit));
         word_lock_queue_data *current = head;
         word_lock_queue_data *tail = current->tail;
-        int times_through = 0;
+        volatile int times_through = 0;
         while (tail == NULL) {
             word_lock_queue_data *next = current->next;
             halide_assert(NULL, next != NULL);

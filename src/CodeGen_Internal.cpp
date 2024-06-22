@@ -91,20 +91,32 @@ void unpack_closure(const Closure &closure,
     int idx = 0;
     for (const auto &v : closure.vars) {
         Value *ptr = builder->CreateConstInBoundsGEP2_32(type, src, 0, idx++);
+#if LLVM_VERSION >= 130
+        LoadInst *load = builder->CreateLoad(type->getTypeAtIndex(idx - 1), ptr);
+#else
         LoadInst *load = builder->CreateLoad(ptr);
+#endif
         dst.push(v.first, load);
         load->setName(v.first);
     }
     for (const auto &b : closure.buffers) {
         {
             Value *ptr = builder->CreateConstInBoundsGEP2_32(type, src, 0, idx++);
+#if LLVM_VERSION >= 130
+            LoadInst *load = builder->CreateLoad(type->getTypeAtIndex(idx - 1), ptr);
+#else
             LoadInst *load = builder->CreateLoad(ptr);
+#endif
             dst.push(b.first, load);
             load->setName(b.first);
         }
         {
             Value *ptr = builder->CreateConstInBoundsGEP2_32(type, src, 0, idx++);
+#if LLVM_VERSION >= 130
+            LoadInst *load = builder->CreateLoad(type->getTypeAtIndex(idx - 1), ptr);
+#else
             LoadInst *load = builder->CreateLoad(ptr);
+#endif
             dst.push(b.first + ".buffer", load);
             load->setName(b.first + ".buffer");
         }
@@ -126,13 +138,21 @@ llvm::Type *llvm_type_of(LLVMContext *c, Halide::Type t) {
                 return nullptr;
             }
         } else if (t.is_handle()) {
+#if LLVM_VERSION >= 120
+            return llvm::Type::getInt8Ty(*c)->getPointerTo();
+#else
             return llvm::Type::getInt8PtrTy(*c);
+#endif
         } else {
             return llvm::Type::getIntNTy(*c, t.bits());
         }
     } else {
         llvm::Type *element_type = llvm_type_of(c, t.element_of());
+#if LLVM_VERSION >= 120
+        return FixedVectorType::get(element_type, t.lanes());
+#else
         return VectorType::get(element_type, t.lanes());
+#endif
     }
 }
 
@@ -559,7 +579,7 @@ bool get_md_string(llvm::Metadata *value, std::string &result) {
     }
     llvm::MDString *c = llvm::dyn_cast<llvm::MDString>(value);
     if (c) {
-        result = c->getString();
+        result = c->getString().str();
         return true;
     }
     return false;
@@ -584,7 +604,9 @@ void get_target_options(const llvm::Module &module, llvm::TargetOptions &options
     options.HonorSignDependentRoundingFPMathOption = !per_instruction_fast_math_flags;
     options.NoZerosInBSS = false;
     options.GuaranteedTailCallOpt = false;
+#if LLVM_VERSION <= 120
     options.StackAlignmentOverride = 0;
+#endif
     options.FunctionSections = true;
     options.UseInitArray = true;
     options.FloatABIType =
@@ -646,7 +668,12 @@ std::unique_ptr<llvm::TargetMachine> make_target_machine(const llvm::Module &mod
 #else
                                                 llvm::CodeModel::Small,
 #endif
-                                                llvm::CodeGenOpt::Aggressive);
+#if LLVM_VERSION >= 180
+                                                llvm::CodeGenOptLevel::Aggressive
+#else
+                                                llvm::CodeGenOpt::Aggressive
+#endif
+                                                );
     return std::unique_ptr<llvm::TargetMachine>(tm);
 }
 
@@ -659,7 +686,11 @@ void set_function_attributes_for_target(llvm::Function *fn, Target t) {
 void embed_bitcode(llvm::Module *M, const string &halide_command) {
     // Save llvm.compiler.used and remote it.
     SmallVector<Constant *, 2> used_array;
+#if LLVM_VERSION >= 130
+    SmallVector<GlobalValue *, 4> used_globals;
+#else
     SmallPtrSet<GlobalValue *, 4> used_globals;
+#endif
     llvm::Type *used_element_type = llvm::Type::getInt8Ty(M->getContext())->getPointerTo(0);
     GlobalVariable *used = collectUsedGlobalVariables(*M, used_globals, true);
     for (auto *GV : used_globals) {

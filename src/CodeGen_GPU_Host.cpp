@@ -212,12 +212,16 @@ void CodeGen_GPU_Host<CodeGen_CPU>::compile_func(
     Value *kernel_size = ConstantInt::get(i32_t, kernel_src.size());
     std::string init_kernels_name =
         "halide_" + api_unique_name + "_initialize_kernels";
-    Value *init = module->getFunction(init_kernels_name);
+    llvm::Function *init = module->getFunction(init_kernels_name);
     internal_assert(init) << "Could not find function " + init_kernels_name +
                                  " in initial module\n";
     vector<Value *> init_kernels_args = {user_context, module_state,
                                          kernel_src_ptr, kernel_size};
+#if LLVM_VERSION >= 120
+    Value *result = builder->CreateCall(llvm::FunctionCallee(init), init_kernels_args);
+#else
     Value *result = builder->CreateCall(init, init_kernels_args);
+#endif
     Value *did_succeed =
         builder->CreateICmpEQ(result, ConstantInt::get(i32_t, 0));
     CodeGen_CPU::create_assertion(did_succeed, Expr(), result);
@@ -491,9 +495,16 @@ void CodeGen_GPU_Host<CodeGen_CPU>::visit(const For *loop) {
 
     // Order-of-evaluation is guaranteed to be in order in brace-init-lists,
     // so the multiple calls to codegen here are fine
+#if LLVM_VERSION >= 130
+    PointerType *void_ptr_type = llvm::Type::getInt8Ty(*context)->getPointerTo();
+#endif
     Value *launch_args[] = {
         get_user_context(),
+#if LLVM_VERSION >= 130
+        builder->CreateLoad(void_ptr_type, get_module_state(api_unique_name)),
+#else
         builder->CreateLoad(get_module_state(api_unique_name)),
+#endif
         entry_name_str,
         codegen(bounds.num_blocks[0]),
         codegen(bounds.num_blocks[1]),
@@ -522,7 +533,11 @@ void CodeGen_GPU_Host<CodeGen_CPU>::visit(const For *loop) {
     llvm::Function *dev_run_fn = module->getFunction(run_fn_name);
     internal_assert(dev_run_fn)
         << "Could not find " << run_fn_name << " in module\n";
+#if LLVM_VERSION >= 120
+    Value *result = builder->CreateCall(llvm::FunctionCallee(dev_run_fn), launch_args);
+#else
     Value *result = builder->CreateCall(dev_run_fn, launch_args);
+#endif
     Value *did_succeed =
         builder->CreateICmpEQ(result, ConstantInt::get(i32_t, 0));
 
@@ -542,7 +557,11 @@ Value *CodeGen_GPU_Host<CodeGen_CPU>::get_module_state(
   GlobalVariable *module_state = module->getGlobalVariable(name, true);
   if (!module_state && create) {
     // Create a global variable to hold the module state
+#if LLVM_VERSION >= 120
+    PointerType *void_ptr_type = llvm::Type::getInt8Ty(*context)->getPointerTo();
+#else
     PointerType *void_ptr_type = llvm::Type::getInt8PtrTy(*context);
+#endif
     module_state = new GlobalVariable(
         *module, void_ptr_type, false, GlobalVariable::InternalLinkage,
         ConstantPointerNull::get(void_ptr_type), name);
@@ -561,6 +580,10 @@ template class CodeGen_GPU_Host<CodeGen_X86>;
 template class CodeGen_GPU_Host<CodeGen_ARM>;
 #endif
 
+#ifdef WITH_LOONGARCH
+template class CodeGen_GPU_Host<CodeGen_LoongArch>;
+#endif
+
 #ifdef WITH_MIPS
 template class CodeGen_GPU_Host<CodeGen_MIPS>;
 #endif
@@ -575,6 +598,10 @@ template class CodeGen_GPU_Host<CodeGen_WebAssembly>;
 
 #ifdef WITH_RISCV
 template class CodeGen_GPU_Host<CodeGen_RISCV>;
+#endif
+
+#ifdef WITH_VE
+template class CodeGen_GPU_Host<CodeGen_VE>;
 #endif
 
 } // namespace Internal

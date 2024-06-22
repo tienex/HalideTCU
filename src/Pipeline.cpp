@@ -182,7 +182,8 @@ AutoSchedulerResults Pipeline::auto_schedule(const Target &target, const Machine
         custom_auto_scheduler(*this, target, arch_params, &results);
     } else {
         user_assert(target.arch == Target::X86 || target.arch == Target::ARM ||
-                    target.arch == Target::POWERPC || target.arch == Target::MIPS)
+                    target.arch == Target::POWERPC || target.arch == Target::MIPS ||
+                    target.arch == Target::LOONGARCH || target.arch == Target::VE)
             << "Automatic scheduling is currently supported only on these architectures.";
         results.scheduler_name = "src/AutoSchedule";  // TODO: find a better name (https://github.com/halide/Halide/issues/4057)
         results.schedule_source = generate_schedules(contents->outputs, target, arch_params);

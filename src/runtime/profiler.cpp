@@ -2,6 +2,10 @@
 #include "printer.h"
 #include "scoped_mutex_lock.h"
 
+#if defined(__clang_major_) && (__clang_major__ >= 17)
+#pragma clang diagnostic ignored "-Wsync-alignment"
+#endif
+
 // Note: The profiler thread may out-live any valid user_context, or
 // be used across many different user_contexts, so nothing it calls
 // can depend on the user context.
@@ -357,7 +361,7 @@ WEAK void halide_profiler_report_unlocked(void *user_context, halide_profiler_st
                     while (sstr.size() < cursor) sstr << " ";
                 }
 
-                int alloc_avg = 0;
+                alloc_avg = 0;
                 if (fs->num_allocs != 0) {
                     alloc_avg = fs->memory_total/fs->num_allocs;
                 }

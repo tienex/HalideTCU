@@ -68,7 +68,7 @@ Target calculate_host_target() {
     os = Target::Windows;
 #endif
 #ifdef __APPLE__
-    os = Target::OSX;
+    os = Target::MacOS;
 #endif
 
     bool use_64_bits = (sizeof(size_t) == 8);
@@ -80,6 +80,12 @@ Target calculate_host_target() {
 #else
 #if __mips__ || __mips || __MIPS__
     Target::Arch arch = Target::MIPS;
+#else
+#if defined(__loongarch)
+    Target::Arch arch = Target::LOONGARCH;
+#else
+#if defined(__ve__)
+    Target::Arch arch = Target::VE;
 #else
 #if defined(__arm__) || defined(__aarch64__)
     Target::Arch arch = Target::ARM;
@@ -164,6 +170,8 @@ Target calculate_host_target() {
 #endif
 #endif
 
+#endif
+#endif
 #endif
 #endif
 #endif
@@ -264,10 +272,14 @@ Target::Feature get_host_cuda_capability(Target t) {
 const std::map<std::string, Target::OS> os_name_map = {
     {"os_unknown", Target::OSUnknown},
     {"linux", Target::Linux},
-    {"windows", Target::Windows},
-    {"osx", Target::OSX},
     {"android", Target::Android},
+    {"windows", Target::Windows},
+    {"osx", Target::MacOS},
+    {"macos", Target::MacOS},
+    {"maccatalyst", Target::MacCatalyst},
     {"ios", Target::IOS},
+    {"tvos", Target::TvOS},
+    {"watchos", Target::WatchOS},
     {"qurt", Target::QuRT},
     {"noos", Target::NoOS},
     {"fuchsia", Target::Fuchsia},
@@ -286,11 +298,13 @@ const std::map<std::string, Target::Arch> arch_name_map = {
     {"arch_unknown", Target::ArchUnknown},
     {"x86", Target::X86},
     {"arm", Target::ARM},
+    {"loongarch", Target::LOONGARCH},
     {"mips", Target::MIPS},
     {"powerpc", Target::POWERPC},
     {"hexagon", Target::Hexagon},
     {"wasm", Target::WebAssembly},
     {"riscv", Target::RISCV},
+    {"ve", Target::VE},
 };
 
 bool lookup_arch(const std::string &tok, Target::Arch &result) {
@@ -636,6 +650,9 @@ bool Target::supported() const {
 #if !defined(WITH_X86)
     bad |= arch == Target::X86;
 #endif
+#if !defined(WITH_LOONGARCH)
+    bad |= arch == Target::LOONGARCH;
+#endif
 #if !defined(WITH_MIPS)
     bad |= arch == Target::MIPS;
 #endif
@@ -653,6 +670,9 @@ bool Target::supported() const {
 #endif
 #if !defined(WITH_RISCV)
     bad |= arch == Target::RISCV;
+#endif
+#if !defined(WITH_VE)
+    bad |= arch == Target::VE;
 #endif
 #if !defined(WITH_PTX)
     bad |= has_feature(Target::CUDA);

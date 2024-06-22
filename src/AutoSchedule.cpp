@@ -703,7 +703,7 @@ map<string, Box> get_pipeline_bounds(DependenceAnalysis &analysis,
         }
 
         set<string> prods;
-        for (const pair<string, Function> &fpair : analysis.env) {
+        for (auto &fpair : analysis.env) {
             prods.insert(fpair.first);
         }
 
@@ -1261,7 +1261,7 @@ Cost Partitioner::get_pipeline_cost() {
     internal_assert(!group_costs.empty());
 
     Cost total_cost(0, 0);
-    for (const pair<FStage, Group> &g : groups) {
+    for (auto &g : groups) {
         const GroupAnalysis &analysis = get_element(group_costs, g.first);
         if (!analysis.cost.defined()) {
             return Cost();
@@ -1280,7 +1280,7 @@ void Partitioner::disp_pipeline_costs() {
     debug(0) << "Pipeline costs:" << '\n';
     debug(0) << "===============" << '\n';
     debug(0) << "Group: (name) [arith cost, mem cost, parallelism]" << '\n';
-    for (const pair<FStage, Group> &g : groups) {
+    for (auto &g : groups) {
         const GroupAnalysis &analysis = get_element(group_costs, g.first);
         if (!total_cost.arith.defined()) {
             continue;
@@ -1341,7 +1341,7 @@ Partitioner::Partitioner(const map<string, Box> &_pipeline_bounds,
         int num_stages = f.second.updates().size() + 1;
         for (int s = 0; s < num_stages; s++) {
             set<string> parents = get_parents(f.second, s);
-            for (const string &c : parents) {
+            for (const auto &c : parents) {
                 // Filter out the calls to pipeline inputs. 'env' only contains
                 // the functions computed and not the inputs.
                 auto iter = dep_analysis.env.find(c);
@@ -1641,7 +1641,7 @@ void Partitioner::group(Partitioner::Level level) {
 
         fixpoint = true;
         vector<pair<string, string>> cand;
-        for (const pair<FStage, Group> &g : groups) {
+        for (auto &g : groups) {
             bool is_output = false;
             for (const Function &f : outputs) {
                 if (g.first.func.name() == f.name()) {
@@ -2136,7 +2136,7 @@ Partitioner::GroupConfig Partitioner::evaluate_choice(const GroupingChoice &choi
             }
         }
 
-        for (const string &f : cons.inlined) {
+        for (const auto &f : cons.inlined) {
             group.inlined.insert(f);
         }
 
@@ -2239,7 +2239,7 @@ map<string, Expr> Partitioner::bounds_to_estimates(const DimBounds &bounds) {
 
 map<FStage, map<string, Box>> Partitioner::group_storage_bounds() {
     map<FStage, map<string, Box>> group_storage_bounds;
-    for (const pair<const FStage, Group> &gpair : groups) {
+    for (auto &gpair : groups) {
         const Group &g = gpair.second;
         DimBounds bounds = get_bounds_from_tile_sizes(g.output, g.tile_sizes);
 
@@ -2267,7 +2267,7 @@ map<FStage, map<string, Box>> Partitioner::group_storage_bounds() {
 
 map<FStage, map<FStage, DimBounds>> Partitioner::group_loop_bounds() {
     map<FStage, map<FStage, DimBounds>> group_bounds;
-    for (const pair<const FStage, Group> &gpair : groups) {
+    for (auto &gpair : groups) {
         Group g = gpair.second;
         map<FStage, DimBounds> mem_bounds;
 
@@ -2867,8 +2867,8 @@ void Partitioner::generate_cpu_schedule(const Target &t, AutoSchedule &sched) {
 
     set<string> inlines;
     // Mark all functions that are inlined.
-    for (const pair<FStage, Group> &g : groups) {
-        for (const string &inline_func : g.second.inlined) {
+    for (auto &g : groups) {
+        for (const auto &inline_func : g.second.inlined) {
             inlines.insert(inline_func);
         }
     }
@@ -2981,7 +2981,7 @@ Partitioner::analyze_spatial_locality(const FStage &stg,
 
         // Accumulate the stride of each access to a loop dimension.
         Expr total_stride = 0;
-        for (const pair<string, vector<Expr>> &call : call_args) {
+        for (auto &call : call_args) {
             Box call_alloc_reg;
             const auto &iter = allocation_bounds.find(call.first);
             if (iter != allocation_bounds.end()) {

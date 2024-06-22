@@ -25,13 +25,20 @@ struct Target {
     enum OS {
         OSUnknown = 0,
         Linux,
-        Windows,
-        OSX,
         Android,
+        Windows,
+        MacOS,
+        MacCatalyst,
         IOS,
+        TvOS,
+        WatchOS,
         QuRT,
         NoOS,
         Fuchsia,
+        FreeBSD,
+        DragonFlyBSD,
+        NetBSD,
+        OpenBSD,
         WebAssemblyRuntime
     } os;
 
@@ -46,7 +53,9 @@ struct Target {
         Hexagon,
         POWERPC,
         WebAssembly,
-        RISCV
+        RISCV,
+        LOONGARCH,
+        VE
     } arch;
 
     /** The bit-width of the target machine. Must be 0 for unknown, or 32 or 64. */

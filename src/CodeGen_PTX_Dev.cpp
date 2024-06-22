@@ -176,7 +176,7 @@ void CodeGen_PTX_Dev::visit(const Call *op) {
     Value *sh_base = codegen_buffer_pointer("__shared", op->type, Store_index);
     Value *to = upgrade_for_memcpy(sh_base, i4_t, idx);
 
-    CallInst *mc1 = builder->CreateMemSet(to, from, 16, 16, false);
+    CallInst *mc1 = builder->CreateMemSet(to, from, 16, Align(16), false);
 
     add_tbaa_metadata(mc1, "fragment_c", 16);
     ;
@@ -192,7 +192,7 @@ void CodeGen_PTX_Dev::visit(const Call *op) {
                                            Store_index);
     Value *to = upgrade_for_memcpy(c_base, i4_t, idx);
 
-    CallInst *mc2 = builder->CreateMemCpy(to, 16, from, 16, 16, false);
+    CallInst *mc2 = builder->CreateMemCpy(to, Align(16), from, Align(16), 16, false);
     add_tbaa_metadata(mc2, "fragment_c", 16);
     ;
   } else if (op->is_intrinsic(Call::mma_memcpy_AB)) {
@@ -214,7 +214,11 @@ void CodeGen_PTX_Dev::visit(const Call *op) {
     Value *idx_l = codegen(memcpy_offset);
     Value *warp_ptr = builder->CreateSelect(cond_wptr, Awarp_ptr, Bwarp_ptr);
     Value *offset_v = codegen(offset_e);
+#if LLVM_VERSION >= 130
+    warp_ptr = builder->CreateInBoundsGEP(i4_t->getPointerTo(), warp_ptr, offset_v);
+#else
     warp_ptr = builder->CreateInBoundsGEP(warp_ptr, offset_v);
+#endif
     Value *lane_ptr = upgrade_for_memcpy(warp_ptr, i4_t, idx_l);
     Value *idx_s = codegen(memcpy_offset);
     Value *sh_base_s =
@@ -222,7 +226,7 @@ void CodeGen_PTX_Dev::visit(const Call *op) {
     sh_base_s = upgrade_for_memcpy(sh_base_s, i4_t, idx_s);
 
     CallInst *mc3 =
-        builder->CreateMemCpy(sh_base_s, 16, lane_ptr, 16, 16, false);
+        builder->CreateMemCpy(sh_base_s, Align(16), lane_ptr, Align(16), 16, false);
     add_tbaa_metadata(mc3, "fragment_c", 16);
 
   }
@@ -269,9 +273,13 @@ void CodeGen_PTX_Dev::visit(const Call *op) {
       for (size_t i = 0; i < 8; i++) {
         Value *p = builder->CreateExtractValue(fragment, i);
         Value *idx = ConstantInt::get(i64_t, i);
+#if LLVM_VERSION >= 130
+        Value *elem_ptr = builder->CreateInBoundsGEP(p->getType(), fragment_c, idx);
+#else
         Value *elem_ptr = builder->CreateInBoundsGEP(fragment_c, idx);
+#endif
         StoreInst *val = builder->CreateStore(p, elem_ptr);
-        Expr ind = make_const(Int(32), i);
+        Expr ind = make_const(Int(32), int32_t(i));
         add_tbaa_metadata(val, "fragment_c", ind);
         ;
       }
@@ -303,10 +311,15 @@ void CodeGen_PTX_Dev::visit(const Call *op) {
     for (size_t i = 0; i < 8; i++) {
 
       Value *idx = ConstantInt::get(i64_t, i);
+#if LLVM_VERSION >= 130
+      Value *elem_ptr = builder->CreateInBoundsGEP(i32_t, fragment_c, idx);
+      LoadInst *lod = builder->CreateLoad(i32_t, elem_ptr);
+#else
       Value *elem_ptr = builder->CreateInBoundsGEP(fragment_c, idx);
       LoadInst *lod = builder->CreateLoad(elem_ptr);
+#endif
       fragC[i] = lod;
-      Expr ind = make_const(Int(32), i);
+      Expr ind = make_const(Int(32), int32_t(i));
       add_tbaa_metadata(lod, "fragment_c", ind);
       ;
     }
@@ -340,9 +353,13 @@ void CodeGen_PTX_Dev::visit(const Call *op) {
     for (size_t i = 0; i < 8; i++) {
       Value *p = builder->CreateExtractValue(new_mac, i);
       Value *idx = ConstantInt::get(i64_t, i);
+#if LLVM_VERSION >= 130
+      Value *elem_ptr = builder->CreateInBoundsGEP(p->getType(), fragment_c, idx);
+#else
       Value *elem_ptr = builder->CreateInBoundsGEP(fragment_c, idx);
+#endif
       StoreInst *macb = builder->CreateStore(p, elem_ptr);
-      Expr ind = make_const(Int(32), i);
+      Expr ind = make_const(Int(32), int32_t(i));
       add_tbaa_metadata(macb, "fragment_c", ind);
       ;
     }
@@ -355,10 +372,15 @@ void CodeGen_PTX_Dev::visit(const Call *op) {
     Value *fragC[8];
     for (size_t i = 0; i < 8; i++) {
       Value *idx = ConstantInt::get(i64_t, i);
+#if LLVM_VERSION >= 130
+      Value *elem_ptr = builder->CreateInBoundsGEP(i32_t->getPointerTo(), fragment_c, idx);
+      LoadInst *lod = builder->CreateLoad(i32_t, elem_ptr);
+#else
       Value *elem_ptr = builder->CreateInBoundsGEP(fragment_c, idx);
       LoadInst *lod = builder->CreateLoad(elem_ptr);
+#endif
       fragC[i] = lod;
-      Expr ind = make_const(Int(32), i);
+      Expr ind = make_const(Int(32), int32_t(i));
       add_tbaa_metadata(lod, "fragment_c", ind);
       ;
     }
@@ -624,7 +646,11 @@ void CodeGen_PTX_Dev::create_alloca(std::map<std::string, llvm::Type *> allocs,
     llvm::Type *type = qq.second;
     AllocaInst *ptr =
         builder->CreateAlloca(type, ConstantInt::get(i32_t, size));
+#if LLVM_VERSION >= 120
+    ptr->setAlignment(Align(8));
+#else
     ptr->setAlignment(8);
+#endif
 
     Value *pointer = ptr;
     builder->SetInsertPoint(here);
@@ -654,7 +680,11 @@ Value *CodeGen_PTX_Dev::codegen_fragment_pointer(std::string buffer,
   if (d.getPointerSize() == 8) {
     indexv = builder->CreateIntCast(indexv, i64_t, true);
   }
+#if LLVM_VERSION >= 130
+  base_address = builder->CreateInBoundsGEP(base_address_type->getPointerTo(), base_address, indexv);
+#else
   base_address = builder->CreateInBoundsGEP(base_address, indexv);
+#endif
   if (load_type != base_address_type) {
     base_address = builder->CreatePointerCast(base_address, load_type);
   }
@@ -680,7 +710,11 @@ Value *CodeGen_PTX_Dev::upgrade_for_memcpy(Value *prev_base,
   if (d.getPointerSize() == 8) {
     indexv = builder->CreateIntCast(indexv, i64_t, true);
   }
+#if LLVM_VERSION >= 130
+  base_address = builder->CreateInBoundsGEP(base_address_type->getPointerTo(), base_address, indexv);
+#else
   base_address = builder->CreateInBoundsGEP(base_address, indexv);
+#endif
   return base_address;
 }
 
@@ -865,7 +899,9 @@ vector<char> CodeGen_PTX_Dev::compile_to_src() {
   internal_assert(target) << err_str << "\n";
 
   TargetOptions options;
+#if LLVM_VERSION <= 110
   options.PrintMachineCode = false;
+#endif
   options.AllowFPOpFusion = FPOpFusion::Fast;
   options.UnsafeFPMath = true;
   options.NoInfsFPMath = true;
@@ -873,11 +909,19 @@ vector<char> CodeGen_PTX_Dev::compile_to_src() {
   options.HonorSignDependentRoundingFPMathOption = false;
   options.NoZerosInBSS = false;
   options.GuaranteedTailCallOpt = false;
+#if LLVM_VERSION <= 120
   options.StackAlignmentOverride = 0;
-
+#endif
+  
   std::unique_ptr<TargetMachine> target_machine(target->createTargetMachine(
       triple.str(), mcpu(), mattrs(), options, llvm::Reloc::PIC_,
-      llvm::CodeModel::Small, CodeGenOpt::Aggressive));
+      llvm::CodeModel::Small,
+#if LLVM_VERSION >= 180
+      CodeGenOptLevel::Aggressive
+#else
+      CodeGenOpt::Aggressive
+#endif
+      ));
 
   internal_assert(target_machine.get()) << "Could not allocate target machine!";
 
@@ -929,7 +973,9 @@ vector<char> CodeGen_PTX_Dev::compile_to_src() {
   b.LoopVectorize = true;
   b.SLPVectorize = true;
 
+#if LLVM_VERSION <= 150
   target_machine->adjustPassManager(b);
+#endif
 
   b.populateFunctionPassManager(function_pass_manager);
   b.populateModulePassManager(module_pass_manager);
@@ -941,7 +987,14 @@ vector<char> CodeGen_PTX_Dev::compile_to_src() {
 
   // Ask the target to add backend passes as necessary.
   bool fail = target_machine->addPassesToEmitFile(
-      module_pass_manager, ostream, nullptr, TargetMachine::CGFT_AssemblyFile,
+      module_pass_manager, ostream, nullptr,
+#if LLVM_VERSION >= 180
+      llvm::CodeGenFileType::AssemblyFile,
+#elif LLVM_VERSION >= 120
+      llvm::CodeGenFileType::CGFT_AssemblyFile,
+#else
+      llvm::TargetMachine::CGFT_AssemblyFile,
+#endif
       true);
   if (fail) {
     internal_error << "Failed to set up passes to emit PTX source\n";
@@ -1014,7 +1067,7 @@ int CodeGen_PTX_Dev::native_vector_bits() const {
 }
 
 string CodeGen_PTX_Dev::get_current_kernel_name() {
-  return function->getName();
+  return function->getName().str();
 }
 
 void CodeGen_PTX_Dev::dump() { module->print(dbgs(), nullptr, false, true); }

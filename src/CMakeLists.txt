@@ -42,6 +42,7 @@ set(RUNTIME_CPP
   linux_clock
   linux_host_cpu_count
   linux_yield
+  loongarch_cpu_features
   matlab
   metadata
   metal
@@ -91,6 +92,7 @@ set(RUNTIME_CPP
   to_string
   trace_helper
   tracing
+  ve_cpu_features
   wasm_cpu_features
   windows_abort
   windows_clock
@@ -106,19 +108,25 @@ set(RUNTIME_CPP
   x86_cpu_features
 )
 
+if (LLVM_VERSION LESS 140)
+    set(PRE_LLVM14 _pre14)
+endif ()
+
 set (RUNTIME_LL
   aarch64
   arm
   arm_no_neon
-  hvx_64
-  hvx_128
+  hvx_64${PRE_LLVM14}
+  hvx_128${PRE_LLVM14}
+  loongarch
   mips
   posix_math
   powerpc
   ptx_dev
+  ve
   wasm_math
   win32_math
-  x86
+  x86${PRE_LLVM14}
   x86_avx
   x86_avx2
   x86_sse41
@@ -309,6 +317,7 @@ set(HEADER_FILES
   CodeGen_GPU_Host.h
   CodeGen_Internal.h
   CodeGen_LLVM.h
+  CodeGen_LoongArch.h
   CodeGen_Metal_Dev.h
   CodeGen_MIPS.h
   CodeGen_OpenCL_Dev.h
@@ -319,6 +328,7 @@ set(HEADER_FILES
   CodeGen_PTX_Dev.h
   CodeGen_PyTorch.h
   CodeGen_RISCV.h
+  CodeGen_VE.h
   CodeGen_WebAssembly.h
   CodeGen_X86.h
   ConciseCasts.h
@@ -488,6 +498,7 @@ add_library(Halide ${HALIDE_LIBRARY_TYPE}
   CodeGen_Hexagon.cpp
   CodeGen_Internal.cpp
   CodeGen_LLVM.cpp
+  CodeGen_LoongArch.cpp
   CodeGen_Metal_Dev.cpp
   CodeGen_MIPS.cpp
   CodeGen_OpenCL_Dev.cpp
@@ -498,6 +509,7 @@ add_library(Halide ${HALIDE_LIBRARY_TYPE}
   CodeGen_PTX_Dev.cpp
   CodeGen_PyTorch.cpp
   CodeGen_RISCV.cpp
+  CodeGen_VE.cpp
   CodeGen_WebAssembly.cpp
   CodeGen_X86.cpp
   CPlusPlusMangle.cpp
@@ -531,6 +543,7 @@ add_library(Halide ${HALIDE_LIBRARY_TYPE}
   InferArguments.cpp
   InjectHostDevBufferCopies.cpp
   InjectOpenGLIntrinsics.cpp
+  InjectTensorOps.cpp
   Inline.cpp
   InlineReductions.cpp
   IntegerDivisionTable.cpp
@@ -628,6 +641,7 @@ add_library(Halide ${HALIDE_LIBRARY_TYPE}
   WasmExecutor.cpp
   WrapCalls.cpp
   WrapExternStages.cpp
+  top_equiv.cpp
   ${HEADER_FILES}
   ${INITIAL_MODULES}
 )
@@ -677,6 +691,11 @@ if (TARGET_HEXAGON)
   list(APPEND LLVM_COMPONENTS Hexagon)
 endif()
 
+if (TARGET_LOONGARCH)
+  target_compile_definitions(Halide PRIVATE "-DWITH_LOONGARCH")
+  list(APPEND LLVM_COMPONENTS LoongArch)
+endif()
+
 if (TARGET_MIPS)
   target_compile_definitions(Halide PRIVATE "-DWITH_MIPS")
   list(APPEND LLVM_COMPONENTS Mips)
@@ -685,6 +704,11 @@ endif()
 if (TARGET_POWERPC)
   target_compile_definitions(Halide PRIVATE "-DWITH_POWERPC")
   list(APPEND LLVM_COMPONENTS PowerPC)
+endif()
+
+if (TARGET_VE)
+  target_compile_definitions(Halide PRIVATE "-DWITH_VE")
+  list(APPEND LLVM_COMPONENTS VE)
 endif()
 
 if (TARGET_WEBASSEMBLY)

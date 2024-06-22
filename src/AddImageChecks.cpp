@@ -153,7 +153,7 @@ Stmt add_image_checks(Stmt s,
     // references to the required sizes.
     map<string, Expr> replace_with_required;
 
-    for (const pair<string, FindBuffers::Result> &buf : bufs) {
+    for (auto &buf : bufs) {
         const string &name = buf.first;
 
         for (int i = 0; i < buf.second.dimensions; i++) {

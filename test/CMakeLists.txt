@@ -40,11 +40,14 @@ function(tests folder)
     if(MSVC)
         target_compile_options("${TARGET}" PRIVATE "$<$<CONFIG:RELEASE>:/Od>")
     else()
-        target_compile_options("${TARGET}" PRIVATE "$<$<CONFIG:RELEASE>:-O0>")
+        target_compile_options("${TARGET}" PRIVATE "$<$<CONFIG:RELEASE>:-O0;-g>")
+        target_link_options("${TARGET}" PRIVATE "$<$<CONFIG:RELEASE>:-O0;-g>")
         # Also allow tests, via conditional compilation, to use the entire
         # capability of the CPU being compiled on via -march=native. This
         # presumes tests are run on the same machine they are compiled on.
-        target_compile_options("${TARGET}" PRIVATE "-march=native")
+        if(NOT APPLE AND CMAKE_OSX_ARCHITECTURES)
+            target_compile_options("${TARGET}" PRIVATE "-march=native")
+        endif()
     endif()
 
     target_include_directories("${TARGET}" PRIVATE "${HALIDE_INCLUDE_DIR}")

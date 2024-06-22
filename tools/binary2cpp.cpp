@@ -24,8 +24,8 @@ int main(int argc, const char **argv) {
             printf("#ifndef _H_%s_binary2cpp\n", target);
             printf("#define _H_%s_binary2cpp\n", target);
             printf("extern \"C\" {\n");
-            printf("extern unsigned char %s[];\n", target);
-            printf("extern int %s_length;\n", target);
+            printf("extern const unsigned char %s[];\n", target);
+            printf("extern const unsigned long %s_length;\n", target);
             printf("}  // extern \"C\"\n");
             printf("#endif  // _H_%s_binary2cpp\n", target);
             return 0;
@@ -40,7 +40,9 @@ int main(int argc, const char **argv) {
     setmode(fileno(stdin), O_BINARY); // On windows bad things will happen unless we read stdin in binary mode
 #endif
     printf("extern \"C\" {\n");
-    printf("unsigned char %s[] = {\n", target);
+    printf("extern const unsigned char %s[];\n", target);
+    printf("extern const unsigned long %s_length;\n", target);
+    printf("const unsigned char %s[] = {\n", target);
     int count = 0;
     int line_break = 0;
     while (1) {
@@ -55,7 +57,10 @@ int main(int argc, const char **argv) {
         count++;
     }
     printf("0};\n");
-    printf("int %s_length = %d;\n", target, count);
+    printf("#ifdef __GNUC__\n");
+    printf("__attribute__((used))\n");
+    printf("#endif\n");
+    printf("const unsigned long %s_length = %d;\n", target, count);
     printf("}  // extern \"C\"\n");
     return 0;
 }

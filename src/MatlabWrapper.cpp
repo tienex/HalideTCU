@@ -23,7 +23,11 @@ llvm::Function *define_matlab_wrapper(llvm::Module *module,
     llvm::Type *i32_ty = llvm::Type::getInt32Ty(ctx);
     Value *user_context = ConstantPointerNull::get(i8_ty->getPointerTo());
 
+#if LLVM_VERSION >= 120
+    llvm::Type *mxArray_ty = llvm::StructType::getTypeByName(module->getContext(), "struct.mxArray");
+#else
     llvm::Type *mxArray_ty = module->getTypeByName("struct.mxArray");
+#endif
     internal_assert(mxArray_ty) << "Did not find mxArray in initial module";
     llvm::Type *mxArray_ptr_ty = mxArray_ty->getPointerTo();
     llvm::Type *mxArray_ptr_ptr_ty = mxArray_ptr_ty->getPointerTo();

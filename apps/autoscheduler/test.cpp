@@ -37,7 +37,13 @@ int main(int argc, char **argv) {
     if (argc > 1) {
         lib = argv[1];
     } else {
+#if defined(__APPLE__)
+        lib = "libauto_schedule.dylib";
+#elif defined(hpux)
+        lib = "libauto_schedule.sl";
+#else
         lib = "libauto_schedule.so";
+#endif
     }
 
     if (dlopen(lib.c_str(), RTLD_LAZY) == nullptr) {

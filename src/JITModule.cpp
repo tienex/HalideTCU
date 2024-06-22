@@ -261,7 +261,11 @@ void JITModule::compile_module(std::unique_ptr<llvm::Module> m, const string &fu
     HalideJITMemoryManager *memory_manager = new HalideJITMemoryManager(dependencies);
     engine_builder.setMCJITMemoryManager(std::unique_ptr<RTDyldMemoryManager>(memory_manager));
 
+#if LLVM_VERSION >= 180
+    engine_builder.setOptLevel(CodeGenOptLevel::Aggressive);
+#else
     engine_builder.setOptLevel(CodeGenOpt::Aggressive);
+#endif
     if (!mcpu.empty()) {
         engine_builder.setMCPU(mcpu);
     }
@@ -347,7 +351,7 @@ JITModule JITModule::make_trampolines_module(const Target &target_arg,
     JITModule result;
     std::vector<std::pair<std::string, ExternSignature>> extern_signatures;
     std::vector<std::string> requested_exports;
-    for (const std::pair<std::string, JITExtern> &e : externs) {
+    for (const auto &e : externs) {
         const std::string &callee_name = e.first;
         const std::string wrapper_name = callee_name + suffix;
         const ExternCFunction &extern_c = e.second.extern_c_function();
@@ -748,7 +752,7 @@ JITModule &make_module(llvm::Module *for_module, Target target,
         for (auto &f : *module) {
             // LLVM_Runtime_Linker has marked everything that should be exported as weak
             if (f.hasWeakLinkage()) {
-                halide_exports_unique.insert(f.getName());
+                halide_exports_unique.insert(f.getName().str());
             }
         }
 

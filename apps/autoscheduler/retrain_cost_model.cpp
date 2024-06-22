@@ -425,6 +425,8 @@ int main(int argc, char **argv) {
                 float badness = 0;
             } worst_inversion;
 
+            (void)counter;
+
 #if defined(_OPENMP)
             #pragma omp parallel for
 #endif
